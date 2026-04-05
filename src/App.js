@@ -10,10 +10,10 @@ import Settings from './pages/Settings';
 function App() {
   return (
     <Router>
-      <div className="flex bg-slate-50 min-h-screen font-sans">
+      <div className="flex flex-col lg:flex-row bg-slate-50 min-h-screen font-sans overflow-x-hidden">
         <Sidebar />
-        {/* Main Content Area */}
-        <main className="flex-1 ml-64 min-h-screen">
+        {/* Main Content Area: Padding adjust for mobile header and desktop sidebar */}
+        <main className="flex-1 w-full lg:ml-64 pt-20 lg:pt-0 min-h-screen transition-all duration-300">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/patients" element={<Patients />} />
