@@ -1,8 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
+import { getDatabase } from "firebase/database"; // Realtime Database import
 
-// Tera asli configuration yahan hai
 const firebaseConfig = {
   apiKey: "AIzaSyD8LwUG3yE4eAtB71yn-jXdUBr82GLOqtg",
   authDomain: "smart-nephelo.firebaseapp.com",
@@ -10,16 +9,14 @@ const firebaseConfig = {
   storageBucket: "smart-nephelo.firebasestorage.app",
   messagingSenderId: "640848794365",
   appId: "1:640848794365:web:0ad6a85025860dc331e494",
-  measurementId: "G-LC6LFHBS2H"
+  measurementId: "G-LC6LFHBS2H",
+  databaseURL: "https://smart-nephelo-default-rtdb.firebaseio.com" // Aapka RTDB URL
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Database (Firestore) ko export kar rahe hain taaki baaki pages use kar sakein
+// Exports
 export const db = getFirestore(app);
-
-// Analytics (Optional)
-export const analytics = getAnalytics(app);
+export const rtdb = getDatabase(app); 
 
 export default app;
