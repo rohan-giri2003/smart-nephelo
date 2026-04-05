@@ -1,15 +1,25 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
 
-// Apne Firebase Console se ye details yaha paste karein
+// Tera asli configuration yahan hai
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyD8LwUG3yE4eAtB71yn-jXdUBr82GLOqtg",
+  authDomain: "smart-nephelo.firebaseapp.com",
+  projectId: "smart-nephelo",
+  storageBucket: "smart-nephelo.firebasestorage.app",
+  messagingSenderId: "640848794365",
+  appId: "1:640848794365:web:0ad6a85025860dc331e494",
+  measurementId: "G-LC6LFHBS2H"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Database (Firestore) ko export kar rahe hain taaki baaki pages use kar sakein
 export const db = getFirestore(app);
+
+// Analytics (Optional)
+export const analytics = getAnalytics(app);
+
+export default app;
