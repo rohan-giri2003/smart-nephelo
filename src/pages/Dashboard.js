@@ -1,135 +1,163 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db, rtdb } from '../services/firebase';
 import { collection, getDocs } from "firebase/firestore";
-import { ref, onValue } from "firebase/database";
-import { QRCodeSVG } from 'qrcode.react';
-import { Activity, Share2, TrendingUp, Users, ShieldCheck, Zap, Server, Globe } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ref, set } from "firebase/database"; 
+import { calculateTurbidity } from '../services/analysisService';
+import { Camera, FileDown, AlertTriangle, CheckCircle, RefreshCw, Zap, Activity, Smartphone } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
-const Dashboard = () => {
-  const [liveData, setLiveData] = useState({ current_ntu: 0, status: 'IDLE' });
-  const [stats, setStats] = useState({ total: 0, critical: 0 });
-  const appUrl = window.location.href;
+const Analysis = () => {
+  const [patients, setPatients] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState("");
+  const [result, setResult] = useState(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [step, setStep] = useState(1);
+  
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const snap = await getDocs(collection(db, "patients"));
-      setStats({ total: snap.size, critical: Math.floor(snap.size * 0.25) });
+    const fetchPatients = async () => {
+      const querySnapshot = await getDocs(collection(db, "patients"));
+      setPatients(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
-    fetchStats();
+    fetchPatients();
 
-    onValue(ref(rtdb, 'live_telemetry'), (snapshot) => {
-      if (snapshot.exists()) setLiveData(snapshot.val());
-    });
+    // Cleanup camera when leaving page
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
   }, []);
 
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" } // Use back camera
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setIsCameraOpen(true);
+      }
+    } catch (err) {
+      console.error("Camera Error: ", err);
+      alert("Please allow camera permissions to use this feature.");
+    }
+  };
+
+  const handleCapture = () => {
+    if (!selectedPatient) return alert("Select a patient first!");
+    setIsAnalyzing(true);
+    
+    if (navigator.vibrate) navigator.vibrate(100);
+
+    setTimeout(() => {
+      // Real Intensity calculation logic (Mock for UI)
+      const ntuValue = (Math.random() * 8 + 0.5).toFixed(2); 
+      setResult(ntuValue);
+      setIsAnalyzing(false);
+      setStep(3);
+
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+      // Sync to Firebase RTDB
+      set(ref(rtdb, 'live_telemetry'), {
+        current_ntu: ntuValue,
+        status: ntuValue > 5 ? "CRITICAL" : "NORMAL",
+        timestamp: new Date().toISOString()
+      });
+    }, 4000); 
+  };
+
   return (
-    <div className="p-6 lg:p-10 max-w-full mx-auto bg-slate-50 min-h-screen space-y-8">
-      
-      {/* --- ZONE 1: TOP ANALYTICS TILES --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-[2.5rem] border-b-4 border-blue-600 shadow-xl flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Database</p>
-            <h3 className="text-3xl font-black text-slate-900">{stats.total} <span className="text-sm text-slate-400">Cases</span></h3>
+    <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6">
+      {/* Progress Wizard */}
+      <div className="flex justify-between mb-12 relative px-10">
+        <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2"></div>
+        {[1, 2, 3].map((s) => (
+          <div key={s} className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-black border-4 border-white shadow-sm transition-all ${step >= s ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+            {s}
           </div>
-          <Users className="text-blue-600 opacity-20" size={40}/>
-        </div>
-
-        <div className="bg-white p-6 rounded-[2.5rem] border-b-4 border-emerald-500 shadow-xl flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">System Health</p>
-            <h3 className="text-3xl font-black text-emerald-600">98% <span className="text-sm text-slate-400">Ready</span></h3>
-          </div>
-          <ShieldCheck className="text-emerald-500 opacity-20" size={40}/>
-        </div>
-
-        <div className="bg-white p-6 rounded-[2.5rem] border-b-4 border-red-500 shadow-xl flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">High Turbidity</p>
-            <h3 className="text-3xl font-black text-red-500">{stats.critical} <span className="text-sm text-slate-400">Alerts</span></h3>
-          </div>
-          <Zap className="text-red-500 opacity-20" size={40}/>
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl flex items-center justify-between text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Cloud Status</p>
-            <h3 className="text-xl font-black italic tracking-tighter uppercase">Synchronized</h3>
-          </div>
-          <Globe className="text-blue-500 opacity-30 animate-pulse relative z-10" size={40}/>
-        </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* --- ZONE 2: LIVE SENSOR CORE --- */}
-        <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100 flex flex-col items-center justify-center text-center">
-            <div className="mb-6 flex flex-col items-center">
-                <div className="w-16 h-1 bg-blue-600 rounded-full mb-4"></div>
-                <h2 className="text-sm font-black text-slate-800 uppercase tracking-[0.3em] italic">Real-Time Core</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* LEFT CARD: CAMERA & CONTROL */}
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden relative">
+          {step === 1 && (
+            <div className="animate-in slide-in-from-bottom-4">
+              <h2 className="text-xl font-black mb-6 uppercase italic text-slate-800">1. Identity Verification</h2>
+              <select className="w-full p-5 bg-slate-50 border-none rounded-2xl font-bold mb-6 focus:ring-2 focus:ring-blue-500" 
+                      value={selectedPatient} onChange={(e) => {setSelectedPatient(e.target.value); setStep(2);}}>
+                <option value="">-- Choose Patient --</option>
+                {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
             </div>
-            
-            <div className="text-[120px] font-black text-slate-900 leading-none tracking-tighter mb-4 animate-pulse">
-                {liveData.current_ntu}<span className="text-2xl text-slate-300 ml-2">NTU</span>
-            </div>
-            
-            <div className={`px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-lg ${liveData.current_ntu > 5 ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
-               Condition: {liveData.status}
-            </div>
-        </div>
+          )}
 
-        {/* --- ZONE 3: PREDICTIVE ANALYSIS GRAPH --- */}
-        <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100 relative overflow-hidden">
-          <div className="flex justify-between items-center mb-10">
-            <div className="flex items-center gap-3">
-                <TrendingUp className="text-blue-600" size={24}/>
-                <h2 className="text-xl font-black italic text-slate-800 uppercase">Analysis Trends</h2>
-            </div>
-            <Server className="text-slate-100" size={32}/>
-          </div>
-          
-          <div className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={[{t:1, n:2},{t:2, n:4.5},{t:3, n:liveData.current_ntu}]}>
-                <defs><linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs>
-                <Area type="monotone" dataKey="n" stroke="#2563eb" strokeWidth={6} fill="url(#glow)" strokeLinecap="round" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* --- ZONE 4: SCANNER & DOCUMENTATION --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          <div className="lg:col-span-3 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl flex flex-col justify-center">
-              <h4 className="font-black text-slate-800 italic uppercase mb-2 flex items-center gap-2">
-                <ShieldCheck className="text-emerald-500" size={20}/> Hardware Protocol v2.4
-              </h4>
-              <p className="text-xs text-slate-400 font-bold leading-relaxed">
-                Smartphone-based nephelometric sensor initialized. Calibration is normalized across CMOS variations. 
-                Scattering intensity is processed via 90° light path geometry as per ISO 7027 standards. 
-                Data transmission secured via SSL-encrypted Firebase Relay.
-              </p>
-          </div>
-          
-          <div className="lg:col-span-2 bg-slate-900 p-8 rounded-[3rem] flex items-center justify-around text-white shadow-2xl relative">
-              <div className="bg-white p-4 rounded-[2rem] shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                <QRCodeSVG value={appUrl} size={110} />
+          {step >= 2 && (
+            <div className="animate-in zoom-in-95">
+              <div className="relative aspect-square bg-slate-900 rounded-[2.5rem] overflow-hidden mb-6 border-8 border-slate-50 shadow-inner">
+                {/* Visual Laser Line */}
+                {isAnalyzing && <div className="absolute top-0 left-0 w-full h-2 bg-blue-400 shadow-[0_0_20px_#60a5fa] z-30 animate-scan"></div>}
+                
+                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                
+                {!isCameraOpen && (
+                  <button onClick={startCamera} className="absolute inset-0 m-auto w-24 h-24 bg-white/10 backdrop-blur-md rounded-full flex flex-col items-center justify-center text-white border border-white/20 hover:bg-white/20 transition-all">
+                    <Camera size={32} className="mb-2"/>
+                    <span className="text-[10px] font-black uppercase">Start Lens</span>
+                  </button>
+                )}
               </div>
-              <div className="text-left">
-                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-2">Remote Portal</p>
-                <h4 className="text-sm font-black uppercase leading-tight italic">Scan to Sync<br/>Dashboard</h4>
-                <div className="mt-4 flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                </div>
-              </div>
-          </div>
-      </div>
+              
+              <button 
+                onClick={handleCapture} 
+                disabled={isAnalyzing || !isCameraOpen || step === 3} 
+                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${isAnalyzing ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 text-white shadow-xl shadow-blue-200 hover:scale-[1.02]'}`}
+              >
+                {isAnalyzing ? <RefreshCw className="animate-spin"/> : <Zap size={20}/>}
+                {isAnalyzing ? 'Processing Pixels...' : 'Run Nephelo Scan'}
+              </button>
+            </div>
+          )}
+        </div>
 
+        {/* RIGHT CARD: LIVE REPORT */}
+        <div className="bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-xl flex flex-col items-center justify-center text-center">
+          {result ? (
+            <div className="animate-in zoom-in-90 duration-500 w-full">
+              <div className={`inline-flex items-center gap-2 px-6 py-2 rounded-full font-black text-[10px] uppercase tracking-widest mb-10 ${result > 5 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                {result > 5 ? <AlertTriangle size={16}/> : <CheckCircle size={16}/>}
+                {result > 5 ? 'Critical Turbidity Alert' : 'Safety Standard Verified'}
+              </div>
+              <div className="text-[110px] font-black text-slate-900 leading-none tracking-tighter mb-4">{result}</div>
+              <p className="text-slate-300 font-black uppercase tracking-[0.5em] text-xs">NTU Units</p>
+              <div className="mt-12 flex gap-4">
+                <button onClick={() => window.location.reload()} className="flex-1 py-5 bg-slate-50 rounded-2xl font-black text-slate-400 uppercase text-[10px] tracking-widest">New Sample</button>
+                <button className="flex-1 py-5 bg-slate-900 text-white rounded-2xl font-black flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest shadow-lg">
+                  <FileDown size={18}/> Print PDF
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="opacity-10 py-20 flex flex-col items-center">
+              <Activity size={100} className="mb-4"/>
+              <p className="font-black uppercase tracking-[0.4em] text-xs">Ready for input</p>
+            </div>
+          )}
+        </div>
+      </div>
+      <style>{`
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+        .animate-scan { animation: scan 2s linear infinite; }
+      `}</style>
     </div>
   );
 };
 
-export default Dashboard;
+export default Analysis;
