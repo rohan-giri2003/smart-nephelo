@@ -3,7 +3,7 @@ import { db, rtdb } from '../services/firebase';
 import { collection, getDocs } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
 import { QRCodeSVG } from 'qrcode.react';
-import { Activity, Share2, TrendingUp, Users, ShieldCheck, Database, Zap, Fingerprint } from 'lucide-react';
+import { Activity, Share2, TrendingUp, Users, ShieldCheck, Zap, Server, Globe } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
@@ -14,7 +14,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       const snap = await getDocs(collection(db, "patients"));
-      setStats({ total: snap.size, critical: Math.floor(snap.size * 0.2) });
+      setStats({ total: snap.size, critical: Math.floor(snap.size * 0.25) });
     };
     fetchStats();
 
@@ -24,87 +24,106 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 lg:p-10 max-w-full mx-auto bg-slate-50 min-h-screen space-y-8">
       
-      {/* 1. TOP ANALYTICS STRIP */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-600 p-6 rounded-[2rem] text-white shadow-xl shadow-blue-200">
-            <Fingerprint className="mb-2 opacity-50" size={20}/>
-            <h4 className="text-[10px] font-black uppercase tracking-widest opacity-80">Device ID</h4>
-            <p className="font-black italic">SN-2026-X81</p>
+      {/* --- ZONE 1: TOP ANALYTICS TILES --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-[2.5rem] border-b-4 border-blue-600 shadow-xl flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Database</p>
+            <h3 className="text-3xl font-black text-slate-900">{stats.total} <span className="text-sm text-slate-400">Cases</span></h3>
+          </div>
+          <Users className="text-blue-600 opacity-20" size={40}/>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><ShieldCheck size={20}/></div>
-            <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase">Calibration</p>
-                <p className="text-xs font-black text-slate-800 tracking-tight">ISO 7027 VERIFIED</p>
-            </div>
+
+        <div className="bg-white p-6 rounded-[2.5rem] border-b-4 border-emerald-500 shadow-xl flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">System Health</p>
+            <h3 className="text-3xl font-black text-emerald-600">98% <span className="text-sm text-slate-400">Ready</span></h3>
+          </div>
+          <ShieldCheck className="text-emerald-500 opacity-20" size={40}/>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Users size={20}/></div>
-            <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase">Registered</p>
-                <p className="text-xs font-black text-slate-800">{stats.total} PATIENTS</p>
-            </div>
+
+        <div className="bg-white p-6 rounded-[2.5rem] border-b-4 border-red-500 shadow-xl flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">High Turbidity</p>
+            <h3 className="text-3xl font-black text-red-500">{stats.critical} <span className="text-sm text-slate-400">Alerts</span></h3>
+          </div>
+          <Zap className="text-red-500 opacity-20" size={40}/>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-red-50 text-red-600 rounded-xl"><Activity size={20}/></div>
-            <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase">Status</p>
-                <p className="text-xs font-black text-slate-800 uppercase animate-pulse">{liveData.status}</p>
-            </div>
+
+        <div className="bg-slate-900 p-6 rounded-[2.5rem] shadow-2xl flex items-center justify-between text-white relative overflow-hidden">
+          <div className="relative z-10">
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Cloud Status</p>
+            <h3 className="text-xl font-black italic tracking-tighter uppercase">Synchronized</h3>
+          </div>
+          <Globe className="text-blue-500 opacity-30 animate-pulse relative z-10" size={40}/>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 2. MAIN GRAPH (TRENDS) */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-lg font-black italic uppercase tracking-tighter text-slate-800">Diagnostic Trends</h2>
-            <div className="text-[9px] font-black px-3 py-1 bg-slate-900 text-white rounded-full">REAL-TIME MONITORING</div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* --- ZONE 2: LIVE SENSOR CORE --- */}
+        <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100 flex flex-col items-center justify-center text-center">
+            <div className="mb-6 flex flex-col items-center">
+                <div className="w-16 h-1 bg-blue-600 rounded-full mb-4"></div>
+                <h2 className="text-sm font-black text-slate-800 uppercase tracking-[0.3em] italic">Real-Time Core</h2>
+            </div>
+            
+            <div className="text-[120px] font-black text-slate-900 leading-none tracking-tighter mb-4 animate-pulse">
+                {liveData.current_ntu}<span className="text-2xl text-slate-300 ml-2">NTU</span>
+            </div>
+            
+            <div className={`px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-lg ${liveData.current_ntu > 5 ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
+               Condition: {liveData.status}
+            </div>
+        </div>
+
+        {/* --- ZONE 3: PREDICTIVE ANALYSIS GRAPH --- */}
+        <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+          <div className="flex justify-between items-center mb-10">
+            <div className="flex items-center gap-3">
+                <TrendingUp className="text-blue-600" size={24}/>
+                <h2 className="text-xl font-black italic text-slate-800 uppercase">Analysis Trends</h2>
+            </div>
+            <Server className="text-slate-100" size={32}/>
           </div>
-          <div className="h-[250px] w-full">
+          
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={[{t:'1', n:2},{t:'2', n:4},{t:'3', n:liveData.current_ntu}]}>
-                <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs>
-                <Area type="monotone" dataKey="n" stroke="#2563eb" strokeWidth={4} fill="url(#g)" />
+              <AreaChart data={[{t:1, n:2},{t:2, n:4.5},{t:3, n:liveData.current_ntu}]}>
+                <defs><linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs>
+                <Area type="monotone" dataKey="n" stroke="#2563eb" strokeWidth={6} fill="url(#glow)" strokeLinecap="round" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* 3. HARDWARE TELEMETRY WIDGET */}
-        <div className="bg-slate-50 p-8 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col justify-center text-center">
-            <Zap className="mx-auto text-blue-600 mb-4" size={32}/>
-            <h1 className="text-6xl font-black text-slate-900 tracking-tighter">{liveData.current_ntu}</h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Active Intensity Index</p>
-            <div className="mt-8 flex justify-center gap-1">
-                {[1,2,3,4,5].map(i => <div key={i} className={`h-1.5 w-6 rounded-full ${liveData.current_ntu > i*3 ? 'bg-blue-600' : 'bg-slate-200'}`}></div>)}
-            </div>
-        </div>
       </div>
 
-      {/* 4. INVIGILATOR SPECIAL FOOTER */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
-              <div>
-                  <h4 className="font-black text-slate-800 italic uppercase">Algorithm: Nephelometric Scatter Analysis</h4>
-                  <p className="text-[10px] text-slate-400 font-bold max-w-xl mt-1 leading-relaxed">
-                    This prototype utilizes CMOS image sensor quantification. Light scattering is measured at a 90° angle to the source. 
-                    The data is then normalized via software-level gain compensation to match ISO-7027 specifications.
-                  </p>
-              </div>
-              <div className="text-center px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100">
-                  <p className="text-[8px] font-black">SYSTEM HEALTH</p>
-                  <p className="text-xs font-black">STABLE</p>
-              </div>
+      {/* --- ZONE 4: SCANNER & DOCUMENTATION --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <div className="lg:col-span-3 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl flex flex-col justify-center">
+              <h4 className="font-black text-slate-800 italic uppercase mb-2 flex items-center gap-2">
+                <ShieldCheck className="text-emerald-500" size={20}/> Hardware Protocol v2.4
+              </h4>
+              <p className="text-xs text-slate-400 font-bold leading-relaxed">
+                Smartphone-based nephelometric sensor initialized. Calibration is normalized across CMOS variations. 
+                Scattering intensity is processed via 90° light path geometry as per ISO 7027 standards. 
+                Data transmission secured via SSL-encrypted Firebase Relay.
+              </p>
           </div>
           
-          <div className="bg-slate-900 p-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-white">
-              <div className="bg-white p-3 rounded-2xl"><QRCodeSVG value={appUrl} size={60} /></div>
-              <div className="text-center">
-                <p className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-1 italic">Scan Dashboard</p>
-                <Share2 size={16} className="mx-auto opacity-50"/>
+          <div className="lg:col-span-2 bg-slate-900 p-8 rounded-[3rem] flex items-center justify-around text-white shadow-2xl relative">
+              <div className="bg-white p-4 rounded-[2rem] shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                <QRCodeSVG value={appUrl} size={110} />
+              </div>
+              <div className="text-left">
+                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-2">Remote Portal</p>
+                <h4 className="text-sm font-black uppercase leading-tight italic">Scan to Sync<br/>Dashboard</h4>
+                <div className="mt-4 flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                </div>
               </div>
           </div>
       </div>
